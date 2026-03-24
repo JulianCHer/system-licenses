@@ -17,9 +17,13 @@ export default function Home() {
   const [errorMsg, setErrorMsg] = useState('');
   const [success, setSuccess] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   // Al cargar la página, recuperar el usuario si se usó "Recordarme" previamente
   useEffect(() => {
+    // Activa la animación de entrada suave (fade-in) de toda la tarjeta
+    setTimeout(() => setIsMounted(true), 150);
+
     if (typeof window !== 'undefined') {
       const savedUsername = localStorage.getItem('lazarus-rememberme');
       if (savedUsername) {
@@ -93,7 +97,7 @@ export default function Home() {
         />
       </div>
 
-      <div className="login-container relative z-10 w-full max-w-md">
+      <div className={`login-container relative z-10 w-full max-w-md transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] ${isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
 
         {/* Espacio Contenedor del Logo / Animación */}
         <div className="logo-wrapper flex justify-center mb-[-40px] relative z-20 h-24">
