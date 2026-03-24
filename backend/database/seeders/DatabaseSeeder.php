@@ -2,8 +2,9 @@
 
 namespace Database\Seeders;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -14,11 +15,25 @@ class DatabaseSeeder extends Seeder
      */
     public function run()
     {
-        // \App\Models\User::factory(10)->create();
+        // 1. Insertamos el rol de Administrador primero (por la llave foránea)
+        $roleId = DB::table('t1_licenses_roles')->insertGetId([
+            'name' => 'ADMIN',
+            'description' => 'Administrador absoluto del sistema Lazarus',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
-        // \App\Models\User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
+        // 2. Insertamos tu usuario Administrador
+        // NOTA: Usaremos el campo 'email' como tu nombre de usuario ('JulianH11')
+        DB::table('t1_licenses_users')->insert([
+            'role_id' => $roleId,
+            'full_name' => 'Julian H',
+            'company_name' => 'Lazarus Core',
+            'email' => 'JulianH11', 
+            'password_hash' => Hash::make('Azuladh@ra25'),
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 }
