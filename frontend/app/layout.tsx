@@ -9,7 +9,7 @@ const ibmPlexSans = IBM_Plex_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Sistema de Gestión de Licencias",
+  title: "Gestión de Licencias",
   description: "Plataforma centralizada Lazarus",
 };
 

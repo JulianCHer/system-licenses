@@ -20,6 +20,8 @@ class User extends Authenticatable
         'email',
         'password_hash',
         'phone_number',
+        'establishment_type',
+        'status',
         'is_active',
     ];
 
@@ -31,5 +33,11 @@ class User extends Authenticatable
     public function getAuthPassword()
     {
         return $this->password_hash;
+    }
+
+    // Relación 1:N con las Licencias
+    public function licenses()
+    {
+        return $this->hasMany(LicenseRecord::class, 'user_id', 'id');
     }
 }

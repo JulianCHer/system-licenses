@@ -6,11 +6,14 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import background_login from '../public/back2.svg';
 import Logo_lazarus from '../public/Logo.svg';
 import TechLoading from '../public/Tech_Loading.json';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
+  const router = useRouter();
+
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // Estados para credenciales y respuestas
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -19,19 +22,26 @@ export default function Home() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Al cargar la página, recuperar el usuario si se usó "Recordarme" previamente
+  // Verificar si hay sesión activa para redirigir, o cargar datos previos
   useEffect(() => {
-    // Activa la animación de entrada suave (fade-in) de toda la tarjeta
-    setTimeout(() => setIsMounted(true), 150);
-
     if (typeof window !== 'undefined') {
+      // 1. Validar sesión
+      if (localStorage.getItem('lazarus-token')) {
+        router.replace('/dashboard/licenses');
+        return; // Detenemos la ejecución si está logueado
+      }
+
+      // 2. Si no hay sesión, activar animación suave visual
+      setTimeout(() => setIsMounted(true), 150);
+
+      // 3. Recuperar usuario del "Recordarme" si existe
       const savedUsername = localStorage.getItem('lazarus-rememberme');
       if (savedUsername) {
         setUsername(savedUsername);
         setRememberMe(true);
       }
     }
-  }, []);
+  }, [router]);
 
   // Petición real al backend de Laravel
   const handleLogin = async (e: React.FormEvent) => {
@@ -62,21 +72,18 @@ export default function Home() {
         if (typeof window !== 'undefined') {
           localStorage.setItem('lazarus-token', data.token);
           localStorage.setItem('lazarus-user', JSON.stringify(data.user));
-          
+
           if (rememberMe) {
             localStorage.setItem('lazarus-rememberme', username);
           } else {
             localStorage.removeItem('lazarus-rememberme');
           }
         }
-        
-        // Dejamos correr la animación de Lottie unos segundos por estética antes de entrar a fondo
+
+        // Dejamos correr la animación de Lottie unos segundos por estética antes de redirigir
         setTimeout(() => {
-          // Aquí sería ideal un router.push('/dashboard') usando next/navigation
-          // Por el momento mostramos una alerta para confirmarte que funciona:
-          alert(`¡Bienvenido ${data.user.full_name}! Login validado con la Base de Datos.`);
-          setIsLoading(false);
-        }, 3000);
+          router.replace('/dashboard/licenses');
+        }, 1500);
       }
     } catch (error) {
       setErrorMsg('No hay conexión con el servidor (¿Está encendido el backend?).');
@@ -99,15 +106,12 @@ export default function Home() {
 
       <div className={`login-container relative z-10 w-full max-w-md transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] ${isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
 
-        {/* Espacio Contenedor del Logo / Animación */}
         <div className="logo-wrapper flex justify-center mb-[-40px] relative z-20 h-24">
-          
-          {/* Logo Lazarus Original */}
-          <div className={`logo-box absolute w-24 h-24 bg-[#18181B]/30 backdrop-blur-md rounded-3xl flex items-center justify-center shadow-2xl border border-custom transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-center ${isLoading ? 'rotate-90 scale-0 opacity-0' : 'rotate-0 scale-100 opacity-100'}`}>
+
+          <div className={`logo-box absolute w-24 h-24 bg-[#18181B]/50 backdrop-blur-md rounded-3xl flex items-center justify-center shadow-2xl border border-custom transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-center ${isLoading ? 'rotate-90 scale-0 opacity-0' : 'rotate-0 scale-100 opacity-100'}`}>
             <Image src={Logo_lazarus} alt='Logo lazarus' className='w-[80%]' />
           </div>
 
-          {/* Animación Lottie */}
           <div className={`lottie-wrapper absolute w-40 h-40 -top-8 flex items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] origin-center ${isLoading ? 'rotate-0 scale-100 opacity-100 delay-100' : '-rotate-90 scale-50 opacity-0 pointer-events-none'}`}>
             {isLoading && (
               <DotLottieReact
@@ -120,12 +124,11 @@ export default function Home() {
 
         </div>
 
-        <div className="login-card bg-[#18181B]/30 backdrop-blur-md rounded-3xl p-8 pt-14 shadow-2xl border border-custom mt-2">
+        <div className="login-card bg-[#18181B]/50 backdrop-blur-md rounded-3xl p-8 pt-14 shadow-2xl border border-custom mt-2">
 
           <div className="login-header text-center mb-6">
             <h1 className="login-title text-2xl font-bold text-base-fg tracking-wide">Bienvenido a Lazarus</h1>
-            
-            {/* Mensaje de Error / Éxito Dinámico */}
+
             {errorMsg && (
               <p className="mt-3 text-sm text-red-400 bg-red-900/20 py-2 px-3 rounded-lg border border-red-500/30">
                 {errorMsg}
@@ -140,7 +143,6 @@ export default function Home() {
 
           <form onSubmit={handleLogin} className="login-form space-y-4">
 
-            {/* Input Usuario */}
             <div className="input-group-username space-y-1">
               <label className="text-xs font-semibold text-[#F8FAFC]/70 uppercase tracking-wider ml-1">Usuario</label>
               <input
@@ -154,7 +156,6 @@ export default function Home() {
               />
             </div>
 
-            {/* Input Contraseña */}
             <div className="input-group-password space-y-1">
               <label className="text-xs font-semibold text-[#F8FAFC]/70 uppercase tracking-wider ml-1">Contraseña</label>
               <div className="password-wrapper relative">
@@ -167,9 +168,9 @@ export default function Home() {
                   className="password-input w-full bg-[#09090B] text-base-fg border border-custom rounded-xl px-4 py-3 placeholder:text-[#F8FAFC]/30 focus:outline-none focus:border-[#1D427F] focus:ring-1 focus:ring-[#1D427F] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   required
                 />
-                <button 
-                  type="button" 
-                  disabled={isLoading || success} 
+                <button
+                  type="button"
+                  disabled={isLoading || success}
                   onClick={() => setShowPassword(!showPassword)}
                   className="password-toggle-btn absolute right-4 top-3.5 text-[#F8FAFC]/40 hover:text-base-fg transition-colors disabled:opacity-50"
                   title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
@@ -188,15 +189,14 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Opciones Adicionales */}
             <div className="login-options flex items-center justify-between mt-2">
               <label className="remember-me flex items-center space-x-2 cursor-pointer group">
-                <input 
-                  type="checkbox" 
-                  disabled={isLoading || success} 
+                <input
+                  type="checkbox"
+                  disabled={isLoading || success}
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-custom bg-[#09090B] checked:bg-[#1D427F] accent-[#1D427F] cursor-pointer disabled:opacity-50" 
+                  className="w-4 h-4 rounded border-custom bg-[#09090B] checked:bg-[#1D427F] accent-[#1D427F] cursor-pointer disabled:opacity-50"
                 />
                 <span className="text-xs text-[#F8FAFC]/80 group-hover:text-base-fg transition-colors">Recordarme</span>
               </label>
@@ -206,7 +206,6 @@ export default function Home() {
               </a>
             </div>
 
-            {/* Botón Principal */}
             <div className="submit-button-wrapper pt-4">
               <button
                 type="submit"
