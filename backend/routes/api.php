@@ -24,6 +24,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/clients', [ClientLicenseController::class, 'getClients']);
     Route::post('/clients', [ClientLicenseController::class, 'createClient']);
     Route::put('/clients/{id}', [ClientLicenseController::class, 'updateClient']);
+    Route::get('/clients/{id}/payments', [ClientLicenseController::class, 'getClientPayments']);
     Route::delete('/clients/{id}', [ClientLicenseController::class, 'eraseClient']);
     Route::post('/licenses', [ClientLicenseController::class, 'createLicense']);
+    Route::post('/payments', [ClientLicenseController::class, 'registerPayment']);
+    Route::get('/licenses/{id}/payments', [ClientLicenseController::class, 'getLicensePayments']);
+    Route::put('/licenses/{id}/disable', [ClientLicenseController::class, 'disableLicense']);
 });
