@@ -29,6 +29,16 @@ class AuthController extends Controller
         $eloquentUser = User::find($user->id);
         $token = $eloquentUser->createToken('lazarus-auth-token')->plainTextToken;
 
+        DB::table('t1_logs')->insert([
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'action' => 'LOGIN',
+            'module' => 'auth',
+            'description' => "El usuario '{$user->name}' inició sesión.",
+            'ip_address' => $request->ip(),
+            'created_at' => now(),
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Bienvenido al sistema Lazarus',
