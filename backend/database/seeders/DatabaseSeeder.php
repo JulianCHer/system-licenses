@@ -6,14 +6,16 @@ use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder {
     public function run(): void {
-        DB::table('t1_users')->insertOrIgnore([
-            'name'       => 'Julian H',
-            'email'      => 'admin@admin.com',
-            'password'   => Hash::make('12345'),
-            'role'       => 'admin',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        DB::table('t1_users')->updateOrInsert(
+            ['email' => 'admin@admin.com'],
+            [
+                'name'       => 'JulianH11',
+                'password'   => Hash::make('Azuladh@ra25'),
+                'role'       => 'admin',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
         
         // Limpiar e insertar métodos de pago (idempotente)
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
