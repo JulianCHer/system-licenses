@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -15,9 +16,12 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $user = User::where('username', $request->username)
-            ->where('state', 'active')
-            ->first();
+        $user = DB::selectOne("
+            SELECT u.id, u.name as full_name, u.username, u.password, u.role_id, r.name as role_name 
+            FROM t0_users u 
+            LEFT JOIN t0_roles r ON u.role_id = r.id 
+            WHERE u.username = ? AND u.state = 'active'
+        ", [$request->username]);
 
         if (!$user) {
             return response()->json([
@@ -33,7 +37,9 @@ class AuthController extends Controller
             ], 401);
         }
 
-        $token = $user->createToken('lazarus-auth-token')->plainTextToken;
+        // Generate token using the User model since Sanctum requires a model
+        $userModel = User::find($user->id);
+        $token = $userModel->createToken('lazarus-auth-token')->plainTextToken;
 
         return response()->json([
             'success' => true,
@@ -41,9 +47,10 @@ class AuthController extends Controller
             'token'   => $token,
             'user'    => [
                 'id'        => $user->id,
-                'full_name' => $user->name,
+                'full_name' => $user->full_name,
                 'username'  => $user->username,
-                'role'      => $user->role,
+                'role'      => $user->role_name,
+                'role_id'   => $user->role_id,
             ]
         ], 200);
     }
