@@ -3,8 +3,8 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, KeyRound, Users, BarChart3, Package,
-  Settings, HelpCircle, LogOut, Search, Bell, Mail
+  LayoutDashboard, KeyRound, Users, CreditCard, Activity, Shield,
+  UserCog, Settings, LogOut, Search, Bell, Mail
 } from 'lucide-react';
 import Image from 'next/image';
 import Logo_lazarus from '../../public/Logo.svg';
@@ -45,10 +45,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {[
             { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-            { href: '/dashboard/licenses', label: 'Licencias', icon: KeyRound, badge: '12+' },
+            { href: '/dashboard/licenses', label: 'Licencias', icon: KeyRound },
             { href: '/dashboard/clients', label: 'Clientes', icon: Users },
-            { href: '/dashboard/analytics', label: 'Analíticas', icon: BarChart3 },
-            { href: '/dashboard/products', label: 'Productos', icon: Package },
+            { href: '/dashboard/roles', label: 'Roles', icon: Shield },
+            { href: '/dashboard/users', label: 'Usuarios', icon: UserCog },
+            { href: '/dashboard/billing', label: 'Facturación', icon: CreditCard },
+            { href: '/dashboard/logs', label: 'Logs', icon: Activity },
           ].map((item) => {
             // El dashboard exacto solo es activo si es igual. Los demás si la ruta actual 'arranca' con el href.
             const isActive = item.href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(item.href);

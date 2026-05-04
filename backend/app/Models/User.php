@@ -13,15 +13,11 @@ class User extends Authenticatable
 
     protected $table = 't0_users';
 
-    public $incrementing = false;
-    protected $keyType   = 'string';
-
     protected $fillable = [
-        'id',
         'name',
         'username',
         'password',
-        'role',
+        'role_id',
         'state',
     ];
 
