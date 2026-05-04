@@ -22,6 +22,14 @@ export default function Home() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
+  // Estados para restablecer contraseña
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetUsername, setResetUsername] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetErrorMsg, setResetErrorMsg] = useState('');
+  const [resetSuccessMsg, setResetSuccessMsg] = useState('');
+
   // Verificar si hay sesión activa para redirigir, o cargar datos previos
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -43,6 +51,48 @@ export default function Home() {
     }
   }, [router]);
 
+  // Petición al backend para restablecer la contraseña
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetErrorMsg('');
+    setResetSuccessMsg('');
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ username: resetUsername, new_password: resetNewPassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setResetErrorMsg(data.message || 'Error al restablecer la contraseña.');
+        setResetLoading(false);
+      } else {
+        // Éxito: cerramos modal y activamos el cargando principal
+        setShowResetModal(false);
+        setIsLoading(true);
+        
+        setTimeout(() => {
+          setIsLoading(false); // Detener cargando
+          setUsername(resetUsername); // Pre-llenar el input del login
+          setPassword('');
+          setResetUsername('');
+          setResetNewPassword('');
+          setResetLoading(false);
+        }, 2000);
+      }
+    } catch (error) {
+      setResetErrorMsg('No hay conexión con el servidor.');
+      setResetLoading(false);
+    }
+  };
+
   // Petición real al backend de Laravel
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +106,7 @@ export default function Home() {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({ email: username, password }),
+        body: JSON.stringify({ username, password }),
       });
 
       const data = await response.json();
@@ -86,7 +136,7 @@ export default function Home() {
         }, 1500);
       }
     } catch (error) {
-      setErrorMsg('No hay conexión con el servidor (¿Está encendido el backend?).');
+      setErrorMsg('Conexión con el servidor fallida');
       setIsLoading(false);
     }
   };
@@ -201,9 +251,9 @@ export default function Home() {
                 <span className="text-xs text-[#F8FAFC]/80 group-hover:text-base-fg transition-colors">Recordarme</span>
               </label>
 
-              <a href="#" className="forgot-password text-xs text-[#1D427F] hover:text-[#F8FAFC] transition-colors font-semibold">
+              <button type="button" onClick={(e) => { e.preventDefault(); setShowResetModal(true); }} className="forgot-password text-xs text-[#1D427F] hover:text-[#F8FAFC] transition-colors font-semibold">
                 ¿Olvidaste tu contraseña?
-              </a>
+              </button>
             </div>
 
             <div className="submit-button-wrapper pt-4">
@@ -221,6 +271,68 @@ export default function Home() {
         </div>
 
       </div>
+
+      {/* Modal para restablecer contraseña */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-[#18181B] border border-custom rounded-3xl p-8 w-full max-w-md shadow-2xl relative">
+            <button
+              onClick={() => setShowResetModal(false)}
+              className="absolute top-4 right-4 text-[#F8FAFC]/50 hover:text-white transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <h2 className="text-xl font-bold text-base-fg mb-4">Restablecer Contraseña</h2>
+
+            {resetErrorMsg && (
+              <p className="mb-4 text-sm text-red-400 bg-red-900/20 py-2 px-3 rounded-lg border border-red-500/30">
+                {resetErrorMsg}
+              </p>
+            )}
+            {resetSuccessMsg && (
+              <p className="mb-4 text-sm text-green-400 bg-green-900/20 py-2 px-3 rounded-lg border border-green-500/30">
+                {resetSuccessMsg}
+              </p>
+            )}
+
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#F8FAFC]/70 uppercase tracking-wider ml-1">Usuario</label>
+                <input
+                  type="text"
+                  placeholder="Ingresa el usuario a restablecer"
+                  value={resetUsername}
+                  onChange={(e) => setResetUsername(e.target.value)}
+                  className="w-full bg-[#09090B] text-base-fg border border-custom rounded-xl px-4 py-3 placeholder:text-[#F8FAFC]/30 focus:outline-none focus:border-[#1D427F] focus:ring-1 focus:ring-[#1D427F] transition-all"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#F8FAFC]/70 uppercase tracking-wider ml-1">Nueva Contraseña</label>
+                <input
+                  type="password"
+                  placeholder="Mínimo 8 caracteres"
+                  value={resetNewPassword}
+                  onChange={(e) => setResetNewPassword(e.target.value)}
+                  minLength={8}
+                  className="w-full bg-[#09090B] text-base-fg border border-custom rounded-xl px-4 py-3 placeholder:text-[#F8FAFC]/30 focus:outline-none focus:border-[#1D427F] focus:ring-1 focus:ring-[#1D427F] transition-all"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={resetLoading}
+                className="w-full bg-[#1D427F] text-base-fg font-bold uppercase py-3 rounded-xl hover:bg-[#15315E] transition-colors shadow-lg mt-2 disabled:opacity-50"
+              >
+                {resetLoading ? 'Cambiando...' : 'Cambiar Contraseña'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }

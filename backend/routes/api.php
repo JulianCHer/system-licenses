@@ -13,6 +13,7 @@ use App\Http\Controllers\ClientLicenseController;
 
 // Ruta pública de autenticación validada para la tabla personalizada
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 // Grupo de rutas protegidas para usar con el Token de React
 Route::middleware('auth:sanctum')->group(function () {

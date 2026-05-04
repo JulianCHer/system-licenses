@@ -175,7 +175,7 @@ export default function LicensesModule() {
         window.location.href = '/';
         return;
       }
-      
+
       const data = await res.json();
       if (!res.ok || !data.success) {
         DarkSwal.fire({ icon: 'error', title: 'Falla Interna', text: data.message || 'Error desconocido al procesar el servidor.' });
@@ -472,7 +472,7 @@ export default function LicensesModule() {
       const res = await fetch(fullUrl);
       if (!res.ok) throw new Error("Fetch failed");
       const blob = await res.blob();
-      
+
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64data = reader.result as string;
@@ -480,7 +480,7 @@ export default function LicensesModule() {
         pdf.setFontSize(16);
         pdf.text("Comprobante de Pago LZR", 105, 20, { align: 'center' });
         const imgExt = url.toLowerCase().endsWith('.png') ? 'PNG' : 'JPEG';
-        pdf.addImage(base64data, imgExt, 15, 30, 180, 0); 
+        pdf.addImage(base64data, imgExt, 15, 30, 180, 0);
         window.open(pdf.output('bloburl'), '_blank');
         setIsSyncing(false);
       };
@@ -1019,7 +1019,7 @@ export default function LicensesModule() {
               value={establishmentFilter}
               onChange={(e) => setEstablishmentFilter(e.target.value)}
             >
-              <option value="" selected hidden className="bg-[#18181B] text-[#F8FAFC]">Cualquier Establecimiento</option>
+              <option value="" hidden className="bg-[#18181B] text-[#F8FAFC]">Cualquier Establecimiento</option>
               <option value="Hotel" className="bg-[#18181B] text-[#F8FAFC]">Hotel</option>
               <option value="Parking" className="bg-[#18181B] text-[#F8FAFC]">Parqueadero</option>
               <option value="Restaurant" className="bg-[#18181B] text-[#F8FAFC]">Restaurante</option>

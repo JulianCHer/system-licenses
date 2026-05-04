@@ -12,23 +12,23 @@ class ClientLicenseController extends Controller
     public function getClients(Request $request)
     {
         try {
-            $query = "SELECT * FROM t1_enterprises WHERE status != 'erased'";
+            $query = "SELECT * FROM t1_clients WHERE status != 'erased'";
             $params = [];
 
             if ($request->filled('name')) {
-                $query .= " AND (full_name LIKE ? OR company_name LIKE ?)";
+                $query .= " AND (client_name LIKE ? OR business_name LIKE ?)";
                 $name = "%" . $request->name . "%";
                 $params[] = $name;
                 $params[] = $name;
             }
 
             if ($request->filled('establishment_type')) {
-                $query .= " AND id IN (SELECT enterprise_id FROM t1_licenses WHERE app_type = ?)";
+                $query .= " AND type_enterprise = ?";
                 $params[] = $request->establishment_type;
             }
 
             if ($request->filled('status') && $request->status !== 'all') {
-                $query .= " AND id IN (SELECT enterprise_id FROM t1_licenses WHERE status = ?)";
+                $query .= " AND id IN (SELECT client_id FROM t2_licenses WHERE status = ?)";
                 $params[] = $request->status;
             }
 
@@ -37,11 +37,12 @@ class ClientLicenseController extends Controller
             $clients = DB::select($query, $params);
 
             if (count($clients) > 0) {
-                $userIds = array_map(function($c) { return $c->id; }, $clients);
-                $placeholders = implode(',', array_fill(0, count($userIds), '?'));
-                
-                $licQuery = "SELECT * FROM t1_licenses WHERE enterprise_id IN ($placeholders)";
-                $licParams = $userIds;
+                $clientIds = array_map(function ($c) {
+                    return $c->id; }, $clients);
+                $placeholders = implode(',', array_fill(0, count($clientIds), '?'));
+
+                $licQuery = "SELECT * FROM t2_licenses WHERE client_id IN ($placeholders)";
+                $licParams = $clientIds;
 
                 if ($request->filled('status') && $request->status !== 'all') {
                     $licQuery .= " AND status = ?";
@@ -49,14 +50,14 @@ class ClientLicenseController extends Controller
                 }
 
                 $licenses = DB::select($licQuery, $licParams);
-                
-                $licensesByUser = [];
+
+                $licensesByClient = [];
                 foreach ($licenses as $lic) {
-                    $licensesByUser[$lic->enterprise_id][] = $lic;
+                    $licensesByClient[$lic->client_id][] = $lic;
                 }
-                
+
                 foreach ($clients as $client) {
-                    $client->licenses = $licensesByUser[$client->id] ?? [];
+                    $client->licenses = $licensesByClient[$client->id] ?? [];
                 }
             }
 
@@ -72,11 +73,10 @@ class ClientLicenseController extends Controller
     {
         try {
             $payments = DB::select(
-                "SELECT p.*, l.license_key, l.app_type, m.name as payment_method 
-                 FROM t1_payments p 
-                 JOIN t1_licenses l ON p.license_id = l.id 
-                 JOIN t1_payment_methods m ON p.payment_method_id = m.id 
-                 WHERE l.enterprise_id = ? ORDER BY p.created_at DESC", 
+                "SELECT p.*, l.license_key, l.type 
+                 FROM t3_payments p 
+                 JOIN t2_licenses l ON p.license_id = l.id 
+                 WHERE l.client_id = ? ORDER BY p.created_at DESC",
                 [$clientId]
             );
             return response()->json(['success' => true, 'payments' => $payments], 200);
@@ -90,19 +90,19 @@ class ClientLicenseController extends Controller
     {
         try {
             $request->validate([
-                'full_name' => 'sometimes|string|max:150',
-                'company_name' => 'sometimes|string|max:150',
+                'client_name' => 'sometimes|string|max:150',
+                'business_name' => 'sometimes|string|max:150',
                 'nit' => 'sometimes|string|max:50',
-                'establishment_type' => 'sometimes|string|max:100',
-                'email' => 'sometimes|email|unique:t1_enterprises,email,' . $id,
+                'type_enterprise' => 'sometimes|string|max:100',
+                'email' => 'sometimes|email|unique:t1_clients,email,' . $id,
                 'phone' => 'sometimes|string|max:50',
             ]);
 
             $updates = [];
             $params = [];
 
-            $fields = ['full_name', 'company_name', 'nit', 'establishment_type', 'email', 'phone'];
-            foreach($fields as $field) {
+            $fields = ['client_name', 'business_name', 'nit', 'type_enterprise', 'email', 'phone'];
+            foreach ($fields as $field) {
                 if ($request->has($field)) {
                     $updates[] = "$field = ?";
                     $params[] = $request->$field;
@@ -111,7 +111,7 @@ class ClientLicenseController extends Controller
 
             if (count($updates) > 0) {
                 $updates[] = "updated_at = NOW()";
-                $sql = "UPDATE t1_enterprises SET " . implode(', ', $updates) . " WHERE id = ?";
+                $sql = "UPDATE t1_clients SET " . implode(', ', $updates) . " WHERE id = ?";
                 $params[] = $id;
                 DB::update($sql, $params);
             }
@@ -120,14 +120,14 @@ class ClientLicenseController extends Controller
                 foreach ($request->licenses as $lic) {
                     if (isset($lic['id'])) {
                         DB::update(
-                            "UPDATE t1_licenses SET app_type = ?, plan_type = ?, start_date = ?, end_date = ?, updated_at = NOW() WHERE id = ?",
-                            [$lic['app_type'], $lic['plan_type'], $lic['start_date'], $lic['end_date'], $lic['id']]
+                            "UPDATE t2_licenses SET type = ?, expires_at = ?, updated_at = NOW() WHERE id = ?",
+                            [$lic['type'], $lic['expires_at'], $lic['id']]
                         );
                     }
                 }
             }
 
-            $user = DB::selectOne("SELECT * FROM t1_enterprises WHERE id = ?", [$id]);
+            $user = DB::selectOne("SELECT * FROM t1_clients WHERE id = ?", [$id]);
             return response()->json(['success' => true, 'message' => 'Cliente actualizado', 'client' => $user]);
 
         } catch (ValidationException $e) {
@@ -141,7 +141,7 @@ class ClientLicenseController extends Controller
     public function eraseClient($id)
     {
         try {
-            DB::update("UPDATE t1_enterprises SET status = 'erased', updated_at = NOW() WHERE id = ?", [$id]);
+            DB::update("UPDATE t1_clients SET status = 'erased', updated_at = NOW() WHERE id = ?", [$id]);
             return response()->json(['success' => true, 'message' => 'Cliente movido a papelera vía SQL']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Error SQL: ' . $e->getMessage()], 500);
@@ -153,23 +153,23 @@ class ClientLicenseController extends Controller
     {
         try {
             $request->validate([
-                'full_name' => 'required|string|max:150',
-                'company_name' => 'required|string|max:150',
-                'nit' => 'required|string|max:50',
-                'establishment_type' => 'required|string|max:100',
-                'email' => 'required|email|unique:t1_enterprises,email',
+                'client_name' => 'required|string|max:150',
+                'business_name' => 'nullable|string|max:150',
+                'nit' => 'nullable|string|max:50',
+                'type_enterprise' => 'nullable|string|max:100',
+                'email' => 'required|email|unique:t1_clients,email',
                 'phone' => 'nullable|string|max:50',
             ]);
-            
+
             DB::insert(
-                "INSERT INTO t1_enterprises (full_name, company_name, nit, establishment_type, email, phone, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())",
-                [ $request->full_name, $request->company_name, $request->nit, $request->establishment_type, $request->email, $request->phone ]
+                "INSERT INTO t1_clients (client_name, business_name, nit, type_enterprise, email, phone, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())",
+                [$request->client_name, $request->business_name, $request->nit, $request->type_enterprise, $request->email, $request->phone]
             );
 
-            $userId = DB::getPdo()->lastInsertId();
-            $user = DB::selectOne("SELECT * FROM t1_enterprises WHERE id = ?", [$userId]);
+            $clientId = DB::getPdo()->lastInsertId();
+            $client = DB::selectOne("SELECT * FROM t1_clients WHERE id = ?", [$clientId]);
 
-            return response()->json(['success' => true, 'client' => $user], 201);
+            return response()->json(['success' => true, 'client' => $client], 201);
 
         } catch (ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Duplicado/Error: ' . $e->validator->errors()->first()], 422);
@@ -183,13 +183,11 @@ class ClientLicenseController extends Controller
     {
         try {
             $request->validate([
-                'enterprise_id' => 'required|integer',
+                'client_id' => 'required|integer',
                 'licenses' => 'required|array|min:1',
-                'licenses.*.app_type' => 'required|string|max:100',
-                'licenses.*.plan_type' => 'required|string|max:50',
-                'licenses.*.start_date' => 'required|date',
-                'licenses.*.end_date' => 'required|date|after_or_equal:licenses.*.start_date',
-                'licenses.*.status' => 'required|string|max:50'
+                'licenses.*.type' => 'required|in:trial,monthly,anual',
+                'licenses.*.status' => 'required|in:active,suspended,expired,revoked',
+                'licenses.*.expires_at' => 'nullable|date'
             ]);
 
             $insertedLicenses = [];
@@ -198,23 +196,21 @@ class ClientLicenseController extends Controller
                 $licenseKey = strtoupper(uniqid('LZR-') . '-' . substr(str_shuffle("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 5));
 
                 DB::insert(
-                    "INSERT INTO t1_licenses (enterprise_id, license_key, app_type, plan_type, status, start_date, end_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
+                    "INSERT INTO t2_licenses (client_id, license_key, type, status, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())",
                     [
-                        $request->enterprise_id, 
-                        $licenseKey, 
-                        $licData['app_type'],
-                        $licData['plan_type'],
+                        $request->client_id,
+                        $licenseKey,
+                        $licData['type'],
                         $licData['status'],
-                        $licData['start_date'], 
-                        $licData['end_date']
+                        $licData['expires_at'] ?? null
                     ]
                 );
 
                 $licenseId = DB::getPdo()->lastInsertId();
-                $insertedLicenses[] = DB::selectOne("SELECT * FROM t1_licenses WHERE id = ?", [$licenseId]);
+                $insertedLicenses[] = DB::selectOne("SELECT * FROM t2_licenses WHERE id = ?", [$licenseId]);
             }
 
-            return response()->json(['success' => true, 'message' => 'Lote de t1_licenses generado.', 'licenses' => $insertedLicenses], 201);
+            return response()->json(['success' => true, 'message' => 'Lote de licencias generado.', 'licenses' => $insertedLicenses], 201);
 
         } catch (ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validación Licencias: ' . $e->validator->errors()->first()], 422);
@@ -229,28 +225,16 @@ class ClientLicenseController extends Controller
         try {
             $request->validate([
                 'license_id' => 'required|integer',
-                'amount_paid' => 'required|numeric|min:1',
-                'payment_method' => 'required|string|max:50',
-                'reference_number' => 'nullable|string|max:100',
-                'evidence' => 'nullable|image|max:5120'
+                'amount' => 'required|numeric|min:1',
+                'gateway_reference' => 'nullable|string|max:255'
             ]);
 
-            $evidenceUrl = null;
-            if ($request->hasFile('evidence')) {
-                $path = $request->file('evidence')->store('receipts', 'public');
-                $evidenceUrl = '/storage/' . $path;
-            }
-
-            // Encuentra el payment_method_id a partir del string quemado temporalmente
-            $method = DB::selectOne("SELECT id FROM t1_payment_methods WHERE name = ? LIMIT 1", [$request->payment_method]);
-            $methodId = $method ? $method->id : 1; 
-
             DB::insert(
-                "INSERT INTO t1_payments (license_id, payment_method_id, amount, reference_number, evidence_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())",
-                [$request->license_id, $methodId, $request->amount_paid, $request->reference_number, $evidenceUrl]
+                "INSERT INTO t3_payments (license_id, amount, gateway_reference, status, paid_at, created_at, updated_at) VALUES (?, ?, ?, 'completed', NOW(), NOW(), NOW())",
+                [$request->license_id, $request->amount, $request->gateway_reference]
             );
 
-            DB::update("UPDATE t1_licenses SET status = 'active', updated_at = NOW() WHERE id = ?", [$request->license_id]);
+            DB::update("UPDATE t2_licenses SET status = 'active', updated_at = NOW() WHERE id = ?", [$request->license_id]);
 
             return response()->json(['success' => true, 'message' => 'Abono registrado y licencia activada'], 201);
 
@@ -266,7 +250,7 @@ class ClientLicenseController extends Controller
     {
         try {
             $payments = DB::select(
-                "SELECT p.*, m.name as payment_method FROM t1_payments p JOIN t1_payment_methods m ON p.payment_method_id = m.id WHERE p.license_id = ? ORDER BY p.created_at DESC", 
+                "SELECT * FROM t3_payments WHERE license_id = ? ORDER BY created_at DESC",
                 [$licenseId]
             );
             return response()->json(['success' => true, 'payments' => $payments], 200);
@@ -279,7 +263,7 @@ class ClientLicenseController extends Controller
     public function disableLicense($licenseId)
     {
         try {
-            DB::update("UPDATE t1_licenses SET status = 'disabled', updated_at = NOW() WHERE id = ?", [$licenseId]);
+            DB::update("UPDATE t2_licenses SET status = 'suspended', updated_at = NOW() WHERE id = ?", [$licenseId]);
             return response()->json(['success' => true, 'message' => 'Licencia suspendida.'], 200);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Error SQL: ' . $e->getMessage()], 500);
